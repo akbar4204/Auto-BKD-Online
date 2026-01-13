@@ -98,21 +98,17 @@ with tab1:
             except Exception as e:
                 st.error(f"Error: {e}")
 
-# === TAB 2: ARSIP DATA (FITUR BARU) ===
+# === TAB 2: ARSIP DATA ===
 with tab2:
     st.header("🗃️ Database Arsip")
     
-    # Tombol Refresh untuk memuat data terbaru
     if st.button("🔄 Refresh Data"):
         st.rerun()
         
     data_bkd = get_all_data()
     
     if data_bkd:
-        # Fitur Pencarian Cepat
         search = st.text_input("🔍 Cari data (Ketik nama dosen atau kegiatan):")
-        
-        # Tampilkan Tabel
         st.dataframe(
             data_bkd, 
             use_container_width=True,
@@ -124,3 +120,25 @@ with tab2:
         st.caption(f"Total Dokumen: {len(data_bkd)}")
     else:
         st.warning("Belum ada data yang tersimpan.")
+
+# === WATERMARK / FOOTER ===
+footer="""<style>
+.footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: #f0f2f6;
+    color: #555;
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 100;
+}
+</style>
+<div class="footer">
+<p>Created by Akbar Rizqi Kurniawan | Auto-BKD System © 2024</p>
+</div>
+"""
+st.markdown(footer, unsafe_allow_html=True)
