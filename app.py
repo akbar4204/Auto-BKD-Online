@@ -138,7 +138,8 @@ footer="""<style>
 }
 </style>
 <div class="footer">
-<p>Created by Akbar Rizqi Kurniawan | Auto-BKD System © 2024</p>
+<p>Created by Akbar Rizqi Kurniawan | Auto-BKD System © 2026</p>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
+
