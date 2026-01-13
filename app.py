@@ -13,17 +13,14 @@ SHEET_NAME = 'Database_BKD'
 scope = ['https://www.googleapis.com/auth/spreadsheets',
          'https://www.googleapis.com/auth/drive']
 
-# --- LOGIKA KONEKSI (HYBRID: FILE vs SECRETS) ---
+# --- LOGIKA KONEKSI (HYBRID) ---
 try:
-    # Prioritas 1: Cek apakah ada Secrets (Untuk Streamlit Cloud)
     if "gcp_service_account" in st.secrets:
         creds_dict = st.secrets["gcp_service_account"]
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-    # Prioritas 2: Cek file lokal (Untuk di Laptop sendiri)
     else:
         creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
     
-    # Bangun service
     client = gspread.authorize(creds)
     drive_service = build('drive', 'v3', credentials=creds)
 
@@ -31,36 +28,23 @@ except Exception as e:
     st.error(f"Gagal koneksi: {e}")
     st.stop()
 
-# --- FUNGSI CARI/BUAT FOLDER ---
+# --- FUNGSI-FUNGSI ---
 def get_or_create_folder(folder_name, parent_id):
     query = f"name='{folder_name}' and '{parent_id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false"
     results = drive_service.files().list(q=query, fields="files(id)", supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
     files = results.get('files', [])
-
     if files:
         return files[0]['id']
     else:
-        metadata = {
-            'name': folder_name,
-            'mimeType': 'application/vnd.google-apps.folder',
-            'parents': [parent_id]
-        }
+        metadata = {'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder', 'parents': [parent_id]}
         folder = drive_service.files().create(body=metadata, fields='id', supportsAllDrives=True).execute()
         return folder.get('id')
 
-# --- FUNGSI UPLOAD ---
 def upload_to_drive(file_obj, filename, category_name):
     folder_kategori_id = get_or_create_folder(category_name, DRIVE_FOLDER_ID)
-    
     file_metadata = {'name': filename, 'parents': [folder_kategori_id]}
     media = MediaIoBaseUpload(file_obj, mimetype=file_obj.type)
-    
-    file = drive_service.files().create(
-        body=file_metadata, 
-        media_body=media, 
-        fields='id, webViewLink',
-        supportsAllDrives=True
-    ).execute()
+    file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink', supportsAllDrives=True).execute()
     return file.get('webViewLink')
 
 def update_sheet(data_list):
@@ -70,26 +54,73 @@ def update_sheet(data_list):
         sheet.append_row(["Nama Dosen", "Tanggal", "Nama File", "Kategori", "Link Bukti"])
     sheet.append_row(data_list)
 
+def get_all_data():
+    """Mengambil semua data dari Google Sheet untuk ditampilkan"""
+    try:
+        sheet = client.open(SHEET_NAME).sheet1
+        data = sheet.get_all_records()
+        return data
+    except Exception as e:
+        return []
+
 # --- TAMPILAN WEBSITE ---
-st.set_page_config(page_title="Auto-BKD Cloud", page_icon="☁️")
-st.title("☁️ Auto-BKD (Online Version)")
-st.markdown("Sistem Portofolio Dosen - Terhubung ke Google Drive Kampus")
+st.set_page_config(page_title="Auto-BKD V2", page_icon="🗂️", layout="wide")
+st.title("🗂️ Sistem Manajemen BKD")
 
-with st.form("upload_form"):
-    nama_dosen = st.text_input("Nama Dosen")
-    uploaded_file = st.file_uploader("File Bukti", type=['pdf', 'jpg', 'png', 'docx'])
-    nama_kegiatan = st.text_input("Nama Kegiatan")
-    kategori = st.selectbox("Pilih Folder Kategori", ["Pendidikan", "Penelitian", "Pengabdian", "Penunjang"])
-    tanggal = st.date_input("Tanggal")
+# Buat 2 Tab Menu
+tab1, tab2 = st.tabs(["📤 Upload Baru", "📂 Arsip File"])
+
+# === TAB 1: FORM UPLOAD ===
+with tab1:
+    st.header("Upload Bukti Kegiatan")
+    st.info("File akan otomatis masuk ke Folder Kategori di Google Drive.")
     
-    submit = st.form_submit_button("Arsipkan ke Cloud")
+    with st.form("upload_form"):
+        col1, col2 = st.columns(2)
+        with col1:
+            nama_dosen = st.text_input("Nama Dosen")
+            kategori = st.selectbox("Kategori", ["Pendidikan", "Penelitian", "Pengabdian", "Penunjang"])
+        with col2:
+            tanggal = st.date_input("Tanggal Kegiatan")
+            nama_kegiatan = st.text_input("Nama Kegiatan")
+            
+        uploaded_file = st.file_uploader("File Bukti (PDF/Gambar)", type=['pdf', 'jpg', 'png', 'docx'])
+        
+        submit = st.form_submit_button("Arsipkan Sekarang")
 
-if submit and nama_dosen and uploaded_file and nama_kegiatan:
-    with st.spinner('Sedang memproses ke server...'):
-        try:
-            nama_file_final = f"[{nama_dosen}] {nama_kegiatan}"
-            link = upload_to_drive(uploaded_file, nama_file_final, kategori)
-            update_sheet([nama_dosen, str(tanggal), nama_kegiatan, kategori, link])
-            st.success(f"✅ Sukses! Data tersimpan.")
-        except Exception as e:
-            st.error(f"Error: {e}")
+    if submit and nama_dosen and uploaded_file and nama_kegiatan:
+        with st.spinner('Sedang memproses...'):
+            try:
+                nama_file_final = f"[{nama_dosen}] {nama_kegiatan}"
+                link = upload_to_drive(uploaded_file, nama_file_final, kategori)
+                update_sheet([nama_dosen, str(tanggal), nama_kegiatan, kategori, link])
+                st.success(f"✅ Sukses! Data tersimpan di kategori **{kategori}**.")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# === TAB 2: ARSIP DATA (FITUR BARU) ===
+with tab2:
+    st.header("🗃️ Database Arsip")
+    
+    # Tombol Refresh untuk memuat data terbaru
+    if st.button("🔄 Refresh Data"):
+        st.rerun()
+        
+    data_bkd = get_all_data()
+    
+    if data_bkd:
+        # Fitur Pencarian Cepat
+        search = st.text_input("🔍 Cari data (Ketik nama dosen atau kegiatan):")
+        
+        # Tampilkan Tabel
+        st.dataframe(
+            data_bkd, 
+            use_container_width=True,
+            column_config={
+                "Link Bukti": st.column_config.LinkColumn("Bukti Fisik", display_text="Buka File"),
+                "Tanggal": st.column_config.DateColumn("Tanggal", format="DD/MM/YYYY")
+            }
+        )
+        st.caption(f"Total Dokumen: {len(data_bkd)}")
+    else:
+        st.warning("Belum ada data yang tersimpan.")
