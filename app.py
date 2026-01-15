@@ -7,7 +7,7 @@ from googleapiclient.http import MediaIoBaseUpload
 
 # --- KONFIGURASI ---
 # GANTI DENGAN ID SHARED DRIVE ANDA
-DRIVE_FOLDER_ID = 'MASUKKAN_ID_FOLDER_DRIVE_DISINI' 
+DRIVE_FOLDER_ID = '0AC6nzjQVEw17Uk9PVA' 
 SHEET_NAME = 'Database_BKD'
 
 # Setup Scope
@@ -164,3 +164,4 @@ footer="""<style>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
+
