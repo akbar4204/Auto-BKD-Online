@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
 # --- KONFIGURASI ---
-# GANTI DENGAN ID SHARED DRIVE ANDA
+# ⚠️ PENTING: PASTIKAN ID INI TETAP MENGGUNAKAN ID SHARED DRIVE ANDA
 DRIVE_FOLDER_ID = '0AC6nzjQVEw17Uk9PVA' 
 SHEET_NAME = 'Database_BKD'
 
@@ -79,7 +79,8 @@ with tab1:
         col1, col2 = st.columns(2)
         with col1:
             nama_dosen = st.text_input("Nama Dosen")
-            kategori = st.selectbox("Kategori", ["Pendidikan", "Penelitian", "Pengabdian", "Penunjang"])
+            # 👇 UPDATE DI SINI: Menambahkan "Berkas Lain"
+            kategori = st.selectbox("Kategori", ["Pendidikan", "Penelitian", "Pengabdian", "Penunjang", "Berkas Lain"])
         with col2:
             tanggal = st.date_input("Tanggal Kegiatan")
             nama_kegiatan = st.text_input("Nama Kegiatan")
@@ -142,4 +143,3 @@ footer="""<style>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
-
